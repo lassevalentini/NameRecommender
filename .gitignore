@@ -99,3 +99,7 @@ ENV/
 
 # mypy
 .mypy_cache/
+like-names.txt
+*.sublime-project
+*.sublime-workspace
+*.pickle
