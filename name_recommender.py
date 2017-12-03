@@ -69,11 +69,17 @@ for name in negative_names_file:
 model = LstmModel(args, all_names, positive_names, negative_names)
 model.train()
 
-while True:
-	suggestion = model.make_recommendation()
-	decision = ask_name(suggestion)
-	if decision:
-		add_to_positive(suggestion)
-	else:
-		add_to_negative(suggestion)
-		
+try:
+	suggestions_made = 0
+	while True:
+		suggestions_made += 1
+		suggestion = model.make_recommendation()
+		decision = ask_name(suggestion)
+		if decision:
+			add_to_positive(suggestion)
+		else:
+			add_to_negative(suggestion)
+		if suggestions_made % 10 == 0:
+			model.retrain()
+except KeyboardInterrupt:
+	pass
