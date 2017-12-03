@@ -103,3 +103,6 @@ like-names.txt
 *.sublime-project
 *.sublime-workspace
 *.pickle
+
+negative-names.txt
+positive-names.txt
