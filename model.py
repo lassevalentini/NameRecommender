@@ -20,10 +20,14 @@ class NameRecommendModel:
 		self.positive_names = positive_names
 		print(len(all_names), len(positive_names), len(negative_names))
 
+	def possible_names(self):
+		return (name for name in self.all_names if not name in self.negative_names and not name in self.positive_names)
 
 	def train(self):
 		pass
 
+	def retrain(self):
+		pass
 
 	def make_recommendation(self):
 		pass
@@ -94,28 +98,43 @@ class Dec2VecModel(NameRecommendModel):
 
 
 class LstmModel(NameRecommendModel):
+	def __init__(self, *args):
+		NameRecommendModel.__init__(self, *args)
+		self.name_scores = None
+
+	def name_to_features(self, name):
+		x = np.zeros((self.maxlen, len(self.chars_map)), dtype=np.bool)
+		for i,c in enumerate(name):
+			char_index = self.chars_map[c]
+			x[i, char_index] = 1
+		return x
+
+	def retrain(self):
+		self.train();
+		self.name_scores = None
+
 	def train(self):
 		chars = set()
-		maxlen = 1
+		self.maxlen = 1
 		for name in self.all_names:
-			maxlen = max(len(name), maxlen)
+			self.maxlen = max(len(name), self.maxlen)
 			for char in name:
 				chars.add(char)
-		chars_map = {c: i for i,c in enumerate(chars)}
+		self.chars_map = {c: i for i,c in enumerate(chars)}
 
 		self.model = Sequential()
-		self.model.add(Masking(mask_value=0., input_shape=(maxlen, len(chars))))
+		self.model.add(Masking(mask_value=0., input_shape=(self.maxlen, len(self.chars_map))))
 		self.model.add(LSTM(128))
 		self.model.add(Dense(1, activation='sigmoid'))
-		self.model.add(Activation('softmax'))
+		# self.model.add(Activation('softmax'))
 
 		optimizer = RMSprop(lr=0.01)
 		self.model.compile(loss='binary_crossentropy', optimizer=optimizer)
 
 		train_names = [name for name in self.positive_names if name in self.all_names] + [name for name in self.negative_names if name in self.all_names]
 
-		x = np.zeros((len(train_names), maxlen, len(chars)), dtype=np.bool)
-		y = np.zeros((len(train_names), len(chars)), dtype=np.bool)
+		x = np.zeros((len(train_names), self.maxlen, len(self.chars_map)), dtype=np.bool)
+		y = np.zeros(len(train_names), dtype=np.bool)
 
 		for i,name in enumerate(train_names):
 			if name in self.positive_names:
@@ -126,11 +145,24 @@ class LstmModel(NameRecommendModel):
 				y[i] = 0.5
 				print("Name not in positive or negative: {0}".format(name))
 
-			for j,c in enumerate(name):
-				char_index = chars_map[c]
-				x[i, j, char_index] = 1
+			# for j,c in enumerate(name):
+			# 	char_index = self.chars_map[c]
+			# 	x[i, j, char_index] = 1
+			x[i] = self.name_to_features(name)
 
-		self.model.fit(x, y, batch_size=128, epochs=1000)
+		self.model.fit(x, y, batch_size=5, epochs=80)
+
 
 	def make_recommendation(self):
-		pass
+		if self.name_scores is None:
+			self.name_scores = []
+			for name in self.possible_names():
+				x_pred = np.zeros((1, self.maxlen, len(self.chars_map)))
+				x_pred[0] = self.name_to_features(name)
+				score = self.model.predict(x_pred, verbose=0)[0,0]
+				self.name_scores.append((name, score))
+			self.name_scores = sorted(self.name_scores, key=lambda x: x[1])
+
+		selected_name = self.name_scores.pop(-1)
+		print(selected_name)
+		return selected_name[0]
