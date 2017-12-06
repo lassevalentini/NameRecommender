@@ -1,5 +1,5 @@
 from argparse import ArgumentParser
-from model import Dec2VecModel, LstmModel
+from model import Dec2VecModel, LstmModel, SimpleRnnModel
 import re
 
 parser = ArgumentParser()
@@ -22,11 +22,13 @@ def ask_name(name):
 
 def add_to_negative(name):
 	negative_names_file.write("\n"+name)
+	negative_names_file.flush()
 	negative_names.add(name)
 
 
 def add_to_positive(name):
 	positive_names_file.write("\n"+name)
+	positive_names_file.flush()
 	positive_names.add(name)
 
 
