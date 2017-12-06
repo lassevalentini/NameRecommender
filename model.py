@@ -7,7 +7,7 @@ from nltk import ngrams
 import random
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Masking, Dropout
-from keras.layers import LSTM
+from keras.layers import LSTM, SimpleRNN
 from keras.optimizers import RMSprop
 import numpy as np
 
@@ -97,7 +97,7 @@ class Dec2VecModel(NameRecommendModel):
 
 
 
-class LstmModel(NameRecommendModel):
+class KerasSequentialModel(NameRecommendModel):
 	def __init__(self, *args):
 		NameRecommendModel.__init__(self, *args)
 		self.name_scores = None
@@ -113,6 +113,13 @@ class LstmModel(NameRecommendModel):
 		self.train();
 		self.name_scores = None
 
+
+	def build_model(self):
+		pass
+
+	def fit(self, x, y):
+		pass
+
 	def train(self):
 		chars = set()
 		self.maxlen = 1
@@ -122,15 +129,7 @@ class LstmModel(NameRecommendModel):
 				chars.add(char)
 		self.chars_map = {c: i for i,c in enumerate(chars)}
 
-		self.model = Sequential()
-		self.model.add(Masking(mask_value=0., input_shape=(self.maxlen, len(self.chars_map))))
-		self.model.add(LSTM(64))
-		self.model.add(Dropout(0.2))
-		self.model.add(Dense(1, activation='sigmoid'))
-		# self.model.add(Activation('softmax'))
-
-		optimizer = RMSprop(lr=0.01)
-		self.model.compile(loss='binary_crossentropy', optimizer=optimizer)
+		self.build_model()
 
 		train_names = [name for name in self.positive_names if name in self.all_names] + [name for name in self.negative_names if name in self.all_names]
 
@@ -151,7 +150,7 @@ class LstmModel(NameRecommendModel):
 			# 	x[i, j, char_index] = 1
 			x[i] = self.name_to_features(name)
 
-		self.model.fit(x, y, batch_size=5, epochs=80)
+		self.fit(x, y)
 
 
 	def make_recommendation(self):
@@ -171,3 +170,40 @@ class LstmModel(NameRecommendModel):
 		selected_name = self.name_scores.pop(-1)
 		print(selected_name)
 		return selected_name[0]
+
+
+
+class LstmModel(KerasSequentialModel):
+	def build_model(self):
+		self.model = Sequential()
+		self.model.add(Masking(mask_value=0., input_shape=(self.maxlen, len(self.chars_map))))
+		self.model.add(LSTM(64))
+		self.model.add(Dropout(0.2))
+		self.model.add(Dense(1, activation='sigmoid'))
+		# self.model.add(Activation('softmax'))
+
+		optimizer = RMSprop(lr=0.01)
+		self.model.compile(loss='binary_crossentropy', optimizer=optimizer)
+
+
+	def fit(self, x, y):
+		self.model.fit(x, y, batch_size=5, epochs=80)
+
+
+
+class SimpleRnnModel(KerasSequentialModel):
+	def build_model(self):
+		self.model = Sequential()
+		self.model.add(Masking(mask_value=0., input_shape=(self.maxlen, len(self.chars_map))))
+		self.model.add(SimpleRNN(64))
+		self.model.add(Dropout(0.2))
+		self.model.add(Dense(1, activation='sigmoid'))
+		# self.model.add(Activation('softmax'))
+
+		optimizer = RMSprop(lr=0.01)
+		self.model.compile(loss='binary_crossentropy', optimizer=optimizer)
+
+
+	def fit(self, x, y):
+		self.model.fit(x, y, batch_size=5, epochs=80)
+
