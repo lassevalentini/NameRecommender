@@ -180,14 +180,13 @@ class LstmModel(KerasSequentialModel):
 		self.model.add(LSTM(64))
 		self.model.add(Dropout(0.2))
 		self.model.add(Dense(1, activation='sigmoid'))
-		# self.model.add(Activation('softmax'))
 
-		optimizer = RMSprop(lr=0.01)
+		optimizer = RMSprop(lr=0.005)
 		self.model.compile(loss='binary_crossentropy', optimizer=optimizer)
 
 
 	def fit(self, x, y):
-		self.model.fit(x, y, batch_size=5, epochs=80)
+		self.model.fit(x, y, batch_size=5, epochs=100)
 
 
 
@@ -196,11 +195,10 @@ class SimpleRnnModel(KerasSequentialModel):
 		self.model = Sequential()
 		self.model.add(Masking(mask_value=0., input_shape=(self.maxlen, len(self.chars_map))))
 		self.model.add(SimpleRNN(64))
-		self.model.add(Dropout(0.2))
+		# self.model.add(Dropout(0.2))
 		self.model.add(Dense(1, activation='sigmoid'))
-		# self.model.add(Activation('softmax'))
 
-		optimizer = RMSprop(lr=0.01)
+		optimizer = RMSprop()
 		self.model.compile(loss='binary_crossentropy', optimizer=optimizer)
 
 
