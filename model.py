@@ -6,7 +6,7 @@ import os
 from nltk import ngrams
 import random
 from keras.models import Sequential
-from keras.layers import Dense, Activation, Masking
+from keras.layers import Dense, Activation, Masking, Dropout
 from keras.layers import LSTM
 from keras.optimizers import RMSprop
 import numpy as np
@@ -21,7 +21,7 @@ class NameRecommendModel:
 		print(len(all_names), len(positive_names), len(negative_names))
 
 	def possible_names(self):
-		return (name for name in self.all_names if not name in self.negative_names and not name in self.positive_names)
+		return [name for name in self.all_names if not name in self.negative_names and not name in self.positive_names]
 
 	def train(self):
 		pass
@@ -124,7 +124,8 @@ class LstmModel(NameRecommendModel):
 
 		self.model = Sequential()
 		self.model.add(Masking(mask_value=0., input_shape=(self.maxlen, len(self.chars_map))))
-		self.model.add(LSTM(128))
+		self.model.add(LSTM(64))
+		self.model.add(Dropout(0.2))
 		self.model.add(Dense(1, activation='sigmoid'))
 		# self.model.add(Activation('softmax'))
 
@@ -156,12 +157,16 @@ class LstmModel(NameRecommendModel):
 	def make_recommendation(self):
 		if self.name_scores is None:
 			self.name_scores = []
-			for name in self.possible_names():
-				x_pred = np.zeros((1, self.maxlen, len(self.chars_map)))
-				x_pred[0] = self.name_to_features(name)
-				score = self.model.predict(x_pred, verbose=0)[0,0]
-				self.name_scores.append((name, score))
-			self.name_scores = sorted(self.name_scores, key=lambda x: x[1])
+			possible_names = self.possible_names()
+			x_pred = np.zeros((len(possible_names), self.maxlen, len(self.chars_map)))
+			for i, name in enumerate(possible_names):
+				x_pred[i] = self.name_to_features(name)
+
+			scores = self.model.predict(x_pred, verbose=0)
+
+			for i, (name, score) in enumerate(zip(possible_names, scores)):
+				self.name_scores.append((name, score[0]))
+				self.name_scores = sorted(self.name_scores, key=lambda x: x[1])
 
 		selected_name = self.name_scores.pop(-1)
 		print(selected_name)
