@@ -175,25 +175,29 @@ class KerasSequentialModel(NameRecommendModel):
 
 class LstmModel(KerasSequentialModel):
 	def build_model(self):
+		self.batch_size = 5
+
 		self.model = Sequential()
-		self.model.add(Masking(mask_value=0., input_shape=(self.maxlen, len(self.chars_map))))
+		self.model.add(Masking(
+			mask_value=0, 
+			input_shape=(self.maxlen, len(self.chars_map))))
 		self.model.add(LSTM(64))
 		self.model.add(Dropout(0.2))
 		self.model.add(Dense(1, activation='sigmoid'))
 
-		optimizer = RMSprop(lr=0.005)
+		optimizer = RMSprop(lr=0.003)
 		self.model.compile(loss='binary_crossentropy', optimizer=optimizer)
 
 
 	def fit(self, x, y):
-		self.model.fit(x, y, batch_size=5, epochs=100)
+		self.model.fit(x, y, batch_size=self.batch_size, epochs=120)
 
 
 
 class SimpleRnnModel(KerasSequentialModel):
 	def build_model(self):
 		self.model = Sequential()
-		self.model.add(Masking(mask_value=0., input_shape=(self.maxlen, len(self.chars_map))))
+		self.model.add(Masking(mask_value=0, input_shape=(self.maxlen, len(self.chars_map))))
 		self.model.add(SimpleRNN(64))
 		# self.model.add(Dropout(0.2))
 		self.model.add(Dense(1, activation='sigmoid'))

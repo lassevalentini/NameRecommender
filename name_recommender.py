@@ -7,7 +7,7 @@ parser.add_argument("-t", "--train", action="store_true", help="Train a new prod
 parser.add_argument("-m", "--model-path", help="Path to the model pickle", default='model.pickle')
 parser.add_argument("-p", "--positive-names", help="", default='positive-names.txt')
 parser.add_argument("-n", "--negative-names", help="", default='negative-names.txt')
-parser.add_argument("--match-regex", help="", default='^[a-væøå]+$')
+parser.add_argument("--match-regex", help="", default='^[a-væøå]{3,10}$')
 parser.add_argument("--ignore-regex", help="", default='([wxyzq]|aa|ee|uu|ii|oo)')
 parser.add_argument("--ngrams", help="", default=2)
 parser.add_argument("names", help="Text file with all names, each name on a separate line")
