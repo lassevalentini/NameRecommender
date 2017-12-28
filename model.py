@@ -13,15 +13,19 @@ import numpy as np
 
 
 class NameRecommendModel:
-	def __init__(self, opts, all_names, positive_names, negative_names):
+	def __init__(self, opts, all_names, name_scores):
 		self.opts = opts
 		self.all_names = all_names
-		self.negative_names = negative_names
-		self.positive_names = positive_names
-		print(len(all_names), len(positive_names), len(negative_names))
+		self.name_scores = name_scores
+		self.negative_names = set((name for name, score in name_scores.items() if score <= 2))
+		self.positive_names = set((name for name, score in name_scores.items() if score > 2))
+		self.max_score = max(self.name_scores.items(), key=lambda name_score: name_score[1])[1]
 
 	def possible_names(self):
-		return [name for name in self.all_names if not name in self.negative_names and not name in self.positive_names]
+		return [name for name in self.all_names if not name in self.name_scores]
+
+	def scale_score(self, score):
+		return score/self.max_score
 
 	def train(self):
 		pass
@@ -100,10 +104,10 @@ class Dec2VecModel(NameRecommendModel):
 class KerasSequentialModel(NameRecommendModel):
 	def __init__(self, *args):
 		NameRecommendModel.__init__(self, *args)
-		self.name_scores = None
+		self.estimated_name_scores = None
 
 	def name_to_features(self, name):
-		x = np.zeros((self.maxlen, len(self.chars_map)), dtype=np.bool)
+		x = np.zeros((self.maxlen, len(self.chars_map)), dtype=np.uint8)
 		for i,c in enumerate(name):
 			char_index = self.chars_map[c]
 			x[i, char_index] = 1
@@ -111,7 +115,7 @@ class KerasSequentialModel(NameRecommendModel):
 
 	def retrain(self):
 		self.train();
-		self.name_scores = None
+		self.estimated_name_scores = None
 
 
 	def build_model(self):
@@ -131,20 +135,12 @@ class KerasSequentialModel(NameRecommendModel):
 
 		self.build_model()
 
-		train_names = [name for name in self.positive_names if name in self.all_names] + [name for name in self.negative_names if name in self.all_names]
+		x = np.zeros((len(self.name_scores), self.maxlen, len(self.chars_map)), dtype=np.uint8)
+		y = np.zeros(len(self.name_scores), dtype=np.uint8)
 
-		x = np.zeros((len(train_names), self.maxlen, len(self.chars_map)), dtype=np.bool)
-		y = np.zeros(len(train_names), dtype=np.bool)
-
-		for i,name in enumerate(train_names):
-			if name in self.positive_names:
-				y[i] = 1
-			elif name in self.negative_names:
-				y[i] = 0
-			else:
-				y[i] = 0.5
-				print("Name not in positive or negative: {0}".format(name))
-
+		for i,(name, score) in enumerate(self.name_scores.items()):
+			y[i] = self.scale_score(score)
+		
 			# for j,c in enumerate(name):
 			# 	char_index = self.chars_map[c]
 			# 	x[i, j, char_index] = 1
@@ -154,8 +150,8 @@ class KerasSequentialModel(NameRecommendModel):
 
 
 	def make_recommendation(self):
-		if self.name_scores is None:
-			self.name_scores = []
+		if self.estimated_name_scores is None:
+			self.estimated_name_scores = []
 			possible_names = self.possible_names()
 			x_pred = np.zeros((len(possible_names), self.maxlen, len(self.chars_map)))
 			for i, name in enumerate(possible_names):
@@ -164,12 +160,14 @@ class KerasSequentialModel(NameRecommendModel):
 			scores = self.model.predict(x_pred, verbose=0)
 
 			for i, (name, score) in enumerate(zip(possible_names, scores)):
-				self.name_scores.append((name, score[0]))
-				self.name_scores = sorted(self.name_scores, key=lambda x: x[1])
+				self.estimated_name_scores.append((name, score[0]))
+				self.estimated_name_scores = sorted(self.estimated_name_scores, key=lambda x: x[1])
 
-		selected_name = self.name_scores.pop(-1)
-		print(selected_name)
-		return selected_name[0]
+		selected_name = self.estimated_name_scores.pop(-1)
+		if selected_name[1] > 0.2:
+			print(selected_name)
+			return selected_name[0]
+		return None
 
 
 

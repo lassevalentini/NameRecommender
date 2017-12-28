@@ -16,24 +16,38 @@ args = parser.parse_args()
 
 
 def ask_name(name):
-	decision = input("{0}? (y/n)".format(name))
-	return decision == "y"
+	score = input("{0}? (0-5)".format(name))
+	try:
+		return int(score)
+	except ValueError:
+		return ask_name(name)
 
 
-def add_to_negative(name):
-	negative_names_file.write("\n"+name)
+def add_to_negative(name, score):
+	negative_names_file.write("\n{0} {1}".format(score, name))
 	negative_names_file.flush()
-	negative_names.add(name)
+	name_scores[name] = score
 
 
-def add_to_positive(name):
-	positive_names_file.write("\n"+name)
+def add_to_positive(name, score):
+	positive_names_file.write("\n{0} {1}".format(score, name))
 	positive_names_file.flush()
-	positive_names.add(name)
+	name_scores[name] = score
 
 
 def clean_name(name):
 	return name.lower().replace('\n', '')
+
+
+def read_name_file(name_file_name, name_scores):
+	name_file = open(name_file_name, "a+")
+	name_file.seek(0)
+	for line in name_file:
+		score, name = line.split(' ', 1)
+		name = clean_name(name)
+		if not name in name_scores and name in all_names:
+			name_scores[name] = int(score)
+	return name_file
 
 
 match_regex = re.compile(args.match_regex, re.IGNORECASE)
@@ -54,21 +68,11 @@ with open(args.names, "r") as names:
 
 	print("{0} names after filtering".format(len(all_names)))
 
-# positive_names = TaggedLineDocument(args.positive_names)
-positive_names = set()
-positive_names_file = open(args.positive_names, "a+")
-positive_names_file.seek(0)
-for name in positive_names_file:
-	positive_names.add(clean_name(name))
+name_scores = {}
+positive_names_file = read_name_file(args.positive_names, name_scores)
+negative_names_file = read_name_file(args.negative_names, name_scores)
 
-negative_names = set()
-negative_names_file = open(args.negative_names, "a+")
-negative_names_file.seek(0)
-for name in negative_names_file:
-	negative_names.add(clean_name(name))
-
-
-model = LstmModel(args, all_names, positive_names, negative_names)
+model = LstmModel(args, all_names, name_scores)
 model.train()
 
 try:
@@ -76,12 +80,19 @@ try:
 	while True:
 		suggestions_made += 1
 		suggestion = model.make_recommendation()
-		decision = ask_name(suggestion)
-		if decision:
-			add_to_positive(suggestion)
+
+		if not suggestion:
+			model.retrain()
+			continue
+
+		score = ask_name(suggestion)
+		if score > 2:
+			add_to_positive(suggestion, score)
 		else:
-			add_to_negative(suggestion)
+			add_to_negative(suggestion, score)
+
 		if suggestions_made % 10 == 0:
 			model.retrain()
+			
 except KeyboardInterrupt:
 	pass
