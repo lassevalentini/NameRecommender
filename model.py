@@ -9,6 +9,7 @@ from keras.models import Sequential
 from keras.layers import Dense, Activation, Masking, Dropout
 from keras.layers import LSTM, SimpleRNN
 from keras.optimizers import RMSprop
+from keras.callbacks import EarlyStopping
 import numpy as np
 
 
@@ -164,8 +165,8 @@ class KerasSequentialModel(NameRecommendModel):
 				self.estimated_name_scores = sorted(self.estimated_name_scores, key=lambda x: x[1])
 
 		selected_name = self.estimated_name_scores.pop(-1)
-		if selected_name[1] > 0.2:
-			print(selected_name)
+		print(selected_name)
+		if selected_name[1] > 0.1:
 			return selected_name[0]
 		return None
 
@@ -188,7 +189,7 @@ class LstmModel(KerasSequentialModel):
 
 
 	def fit(self, x, y):
-		self.model.fit(x, y, batch_size=self.batch_size, epochs=120)
+		self.model.fit(x, y, batch_size=self.batch_size, epochs=120, callbacks=[EarlyStopping(monitor='loss', min_delta=0.001, patience=20, verbose=1, mode='min')])
 
 
 
@@ -205,5 +206,5 @@ class SimpleRnnModel(KerasSequentialModel):
 
 
 	def fit(self, x, y):
-		self.model.fit(x, y, batch_size=5, epochs=80)
+		self.model.fit(x, y, batch_size=5, epochs=80, callbacks=[EarlyStopping(monitor='loss', min_delta=0.001, patience=20, verbose=1, mode='min')])
 
