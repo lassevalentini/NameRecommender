@@ -18,12 +18,36 @@ class NameRecommendModel:
 		self.opts = opts
 		self.all_names = all_names
 		self.name_scores = name_scores
-		self.negative_names = set((name for name, score in name_scores.items() if score <= 2))
-		self.positive_names = set((name for name, score in name_scores.items() if score > 2))
+		if opts.balance_classes:
+			self.negative_names = [(name, score) for name, score in name_scores.items() if score <= 2]
+			self.positive_names = [(name, score) for name, score in name_scores.items() if score > 2]
+			
+			if len(self.negative_names) > len(self.positive_names):
+				upsample_names = self.positive_names
+				self.training_set = self.negative_names
+			else:
+				upsample_names = self.negative_names
+				self.training_set = self.positive_names
+
+			# numpy confuses an array of tuples with a multidim array
+			# using an index choice instead
+			choices = np.array(upsample_names)
+			chosen_indexes = np.random.choice(len(choices), len(self.training_set))
+			for name, score in choices[chosen_indexes]:
+				self.training_set.append((name, int(score)))
+
+			self.negative_names = set((name for name, score in self.negative_names))
+			self.positive_names = set((name for name, score in self.positive_names))
+		else:
+			self.training_set = list(name_scores.items())
+
+			self.negative_names = set((name for name, score in name_scores.items() if score <= 2))
+			self.positive_names = set((name for name, score in name_scores.items() if score > 2))
+
 		self.max_score = max(self.name_scores.items(), key=lambda name_score: name_score[1])[1]
 
 	def possible_names(self):
-		return [name for name in self.all_names if not name in self.name_scores]
+		return [name for name in self.all_names if not name in self.negative_names and not name in self.positive_names]
 
 	def scale_score(self, score):
 		return score/self.max_score
@@ -142,10 +166,10 @@ class KerasSequentialModel(NameRecommendModel):
 
 		self.build_model()
 
-		x = np.zeros((len(self.name_scores), self.maxlen, len(self.chars_map)), dtype=np.uint8)
-		y = np.zeros(len(self.name_scores), dtype=np.uint8)
+		x = np.zeros((len(self.training_set), self.maxlen, len(self.chars_map)), dtype=np.uint8)
+		y = np.zeros(len(self.training_set), dtype=np.uint8)
 
-		for i,(name, score) in enumerate(self.name_scores.items()):
+		for i,(name, score) in enumerate(self.training_set):
 			y[i] = self.scale_score(score)
 		
 			# for j,c in enumerate(name):
