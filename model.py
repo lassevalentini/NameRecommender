@@ -71,11 +71,9 @@ class Dec2VecModel(NameRecommendModel):
 	def make_bigrams(self, name):
 		r = ["".join(list(gram)) for gram in ngrams(name, self.opts.ngrams)]
 		return r
-		# return bigram_transformer[name]
 
 
 	def train(self):
-		# bigram_transformer = Phrases((list(name) for name in self.all_names), threshold=1)
 		if self.opts.train or not os.path.exists(self.opts.model_path):
 			# Train model
 			documents = [TaggedDocument(self.make_bigrams(list(name)), [i]) for i,name in enumerate(self.all_names_list)]
@@ -172,9 +170,6 @@ class KerasSequentialModel(NameRecommendModel):
 		for i,(name, score) in enumerate(self.training_set):
 			y[i] = self.scale_score(score)
 		
-			# for j,c in enumerate(name):
-			# 	char_index = self.chars_map[c]
-			# 	x[i, j, char_index] = 1
 			x[i] = self.name_to_features(name)
 
 		self.fit(x, y)
