@@ -39,6 +39,11 @@ class NameRecommendModel:
 
 
 class Dec2VecModel(NameRecommendModel):
+	def __init__(self, *args):
+		NameRecommendModel.__init__(self, *args)
+		self.all_names_list = list(self.all_names)
+
+
 	def make_bigrams(self, name):
 		r = ["".join(list(gram)) for gram in ngrams(name, self.opts.ngrams)]
 		return r
@@ -49,7 +54,7 @@ class Dec2VecModel(NameRecommendModel):
 		# bigram_transformer = Phrases((list(name) for name in self.all_names), threshold=1)
 		if self.opts.train or not os.path.exists(self.opts.model_path):
 			# Train model
-			documents = [TaggedDocument(self.self.make_bigrams(list(name)), [i]) for i,name in enumerate(self.all_names)]
+			documents = [TaggedDocument(self.make_bigrams(list(name)), [i]) for i,name in enumerate(self.all_names_list)]
 			self.model = Doc2Vec(size=25, window=2, min_count=5, workers=4, iter=20)
 			self.model.build_vocab(documents)
 			self.model.train(documents, total_examples=self.model.corpus_count, epochs=self.model.iter)
@@ -68,12 +73,13 @@ class Dec2VecModel(NameRecommendModel):
 		possible_suggestions = []
 
 		for name in self.positive_names:
-			print(name, self.make_bigrams(name))
 			inferred_vector = self.vectorize(name)
 			sims = self.model.docvecs.most_similar([inferred_vector], topn=100)
 			print("{0} top {1}:".format("".join(name), len(sims)))
+			print(sims[0])
+			print(self.model.docvecs.index_to_doctag(sims[0][0]))
 			n_printed = 0
-			for sim in [(self.all_names[i],s) for i,s in sims]:
+			for sim in [(self.all_names_list[i],s) for i,s in sims]:
 				if n_printed >= 5:
 					break
 				if not sim[0] in self.negative_names and not sim[0] in self.positive_names:
@@ -87,7 +93,7 @@ class Dec2VecModel(NameRecommendModel):
 		sims = self.model.docvecs.most_similar(positive=positive_name_vectors, negative=negative_name_vectors, topn=10)
 
 		print("Top 10 of all:")
-		for sim in [(self.all_names[i],s) for i,s in sims]:
+		for sim in [(self.all_names_list[i],s) for i,s in sims]:
 			print("\t", sim)
 			possible_suggestions.append(sim)
 
