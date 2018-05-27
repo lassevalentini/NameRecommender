@@ -5,13 +5,13 @@ import pickle
 import os
 from nltk import ngrams
 import random
-from keras.models import Sequential
-from keras.layers import Dense, Activation, Masking, Dropout
-from keras.layers import LSTM, SimpleRNN
+from keras.models import Sequential, Model
+from keras.layers import Input, Dense, Activation, Masking, Dropout
 from keras.layers import LSTM, SimpleRNN, GRU
 from keras.optimizers import RMSprop
 from keras.callbacks import EarlyStopping
 import numpy as np
+from sklearn.metrics.pairwise import pairwise_distances
 
 
 class NameRecommendModel:
@@ -286,4 +286,76 @@ class GRUModel(KerasSequentialModel):
 
 	def fit(self, x, y):
 		self.model.fit(x, y, batch_size=self.batch_size, epochs=120, shuffle=True, callbacks=[EarlyStopping(monitor='loss', min_delta=0.002, patience=5, verbose=1, mode='min')])
+
+
+class AutoencoderModel(KerasSequentialModel):
+	def build_model(self):
+		self.batch_size = 10
+		self.encoding_dim = 10
+
+		# this is our input placeholder
+		input_layer = Input((self.maxlen * len(self.chars_map),))
+		# "encoded" is the encoded representation of the input
+		encoded = Dense(self.encoding_dim, activation='relu')(input_layer)
+		# "decoded" is the lossy reconstruction of the input
+		decoded = Dense(self.maxlen * len(self.chars_map), activation='sigmoid')(encoded)
+
+		# this model maps an input to its reconstruction
+		self.autoencoder = Model(input_layer, decoded)
+
+		# Encoder part: This model maps an input to its encoded representation
+		self.model = Model(input_layer, encoded)
+
+		# create a placeholder for an encoded input
+		encoded_input = Input(shape=(self.encoding_dim,))
+		# retrieve the last layer of the autoencoder model
+		decoder_layer = self.autoencoder.layers[-1]
+		# create the decoder model
+		decoder = Model(encoded_input, decoder_layer(encoded_input))
+
+		x = np.zeros((len(self.all_names), self.maxlen * len(self.chars_map)), dtype=np.uint8)
+
+		for i,name in enumerate(self.all_names):
+			x[i] = self.name_to_features(name).flatten()
+
+		self.autoencoder.compile(optimizer='adadelta', loss='binary_crossentropy')
+		self.autoencoder.fit(x, x, batch_size=self.batch_size, epochs=10, shuffle=True)#, callbacks=[EarlyStopping(monitor='loss', min_delta=0.002, patience=5, verbose=1, mode='min')])
+
+
+	def fit(self, x, y):
+		pass
+
+	def make_recommendation(self):
+		if self.estimated_name_scores is None:
+			self.estimated_name_scores = []
+			self.name_distance_mapping = self.possible_names()
+			x_pred = np.zeros((len(self.name_distance_mapping), self.maxlen * len(self.chars_map)))
+			for i, name in enumerate(self.name_distance_mapping):
+				x_pred[i] = self.name_to_features(name).flatten()
+
+			possible_names_encodings = self.model.predict(x_pred)
+			x_positive = np.zeros((len(self.positive_names), self.maxlen * len(self.chars_map)))
+			for i, name in enumerate(self.positive_names):
+				x_positive[i] = self.name_to_features(name).flatten()
+
+			positive_names_encodings = self.model.predict(x_positive)
+			sim_matrix = pairwise_distances(positive_names_encodings, possible_names_encodings, 'manhattan')
+
+			# TODO: remove print and this line
+			positive_names = list(self.positive_names)
+
+			for i in range(sim_matrix.shape[0]):
+				dists = [(j, sim_matrix[i,j]) for j in range(sim_matrix.shape[1])]
+				print(positive_names[i], [(self.name_distance_mapping[d[0]], d[1]) for d in sorted(dists, key=lambda x: x[1])[:5]])
+				best = max(dists, key=lambda x: x[1])
+				# dists = sorted(dists, key=lambda x: x[1])[:5]
+				self.estimated_name_scores.append(best)
+			self.estimated_name_scores = sorted(self.estimated_name_scores, key=lambda x: x[1])
+
+		if len(self.estimated_name_scores) > 0:
+			name = self.name_distance_mapping[selection[0]]
+			print(name, selection[1])
+			return name
+
+		return None
 
