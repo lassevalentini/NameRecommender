@@ -71,7 +71,7 @@ class NameRecommendModel:
 		self.max_score = max(self.name_scores.items(), key=lambda name_score: name_score[1])[1]
 
 	def possible_names(self):
-		return [name for name in self.all_names if not name in self.negative_names and not name in self.positive_names]
+		return [name for name in self.all_names if not name in self.name_scores]
 
 	def scale_score(self, score):
 		return score/self.max_score
