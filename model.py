@@ -18,7 +18,9 @@ class NameRecommendModel:
 		self.opts = opts
 		self.all_names = all_names
 		self.name_scores = name_scores
-		if opts.balance_classes:
+
+		# TODO: This should be easily refactored so upsample and downsample shares logic
+		if opts.balance_classes == 'upsample':
 			self.negative_names = [(name, score) for name, score in name_scores.items() if score <= 2]
 			self.positive_names = [(name, score) for name, score in name_scores.items() if score > 2]
 			
@@ -38,6 +40,28 @@ class NameRecommendModel:
 
 			self.negative_names = set((name for name, score in self.negative_names))
 			self.positive_names = set((name for name, score in self.positive_names))
+
+		elif opts.balance_classes == 'downsample':
+			self.negative_names = [(name, score) for name, score in name_scores.items() if score <= 2]
+			self.positive_names = [(name, score) for name, score in name_scores.items() if score > 2]
+
+			if len(self.negative_names) > len(self.positive_names)*opts.sample_factor:
+				downsample_names = self.negative_names
+				self.training_set = list(self.positive_names)
+			else:
+				downsample_names = self.positive_names
+				self.training_set = list(self.negative_names)
+
+			# numpy confuses an array of tuples with a multidim array
+			# using an index choice instead
+			choices = np.array(downsample_names)
+			chosen_indexes = np.random.choice(len(choices), len(self.training_set)*opts.sample_factor)
+			for name, score in choices[chosen_indexes]:
+				self.training_set.append((name, int(score)))
+
+			self.negative_names = set((name for name, score in self.negative_names))
+			self.positive_names = set((name for name, score in self.positive_names))
+
 		else:
 			self.training_set = list(name_scores.items())
 
