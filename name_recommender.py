@@ -36,7 +36,7 @@ def clean_name(name):
 
 
 def read_name_file(name_file_name, name_scores):
-	name_file = open(name_file_name, "a+")
+	name_file = open(name_file_name, "a+", encoding='utf-8')
 	name_file.seek(0)
 	for line in name_file:
 		score, name = line.split(' ', 1)
@@ -64,7 +64,7 @@ match_regex = re.compile(args.match_regex, re.IGNORECASE)
 ignore_regex = re.compile(args.ignore_regex, re.IGNORECASE)
 
 all_names = set()
-with open(args.names, "r") as names:
+with open(args.names, "r", encoding='utf-8') as names:
 	for name in names:
 		if (not match_regex.search(name)) or ignore_regex.search(name):
 			pass
