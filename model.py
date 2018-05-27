@@ -232,12 +232,12 @@ class LstmModel(KerasSequentialModel):
 		self.model.add(Masking(
 			mask_value=0, 
 			input_shape=(self.maxlen, len(self.chars_map))))
-		self.model.add(LSTM(64))
-		self.model.add(Dropout(0.2))
+		self.model.add(LSTM(20))
+		# self.model.add(Dropout(0.3))
 		self.model.add(Dense(1, activation='sigmoid'))
 
-		optimizer = RMSprop(lr=0.003)
-		self.model.compile(loss='binary_crossentropy', optimizer=optimizer)
+		optimizer = RMSprop(lr=0.0001)
+		self.model.compile(loss='mean_squared_error', optimizer=optimizer)
 
 
 	def fit(self, x, y):
