@@ -169,6 +169,7 @@ class KerasSequentialModel(NameRecommendModel):
 	def retrain(self):
 		self.train();
 		self.estimated_name_scores = None
+		self.recommendations_made = 0
 
 
 	def build_model(self):
@@ -197,6 +198,7 @@ class KerasSequentialModel(NameRecommendModel):
 			x[i] = self.name_to_features(name)
 
 		self.fit(x, y)
+		self.recommendations_made = 0
 
 
 	def make_recommendation(self):
@@ -215,7 +217,8 @@ class KerasSequentialModel(NameRecommendModel):
 
 		selected_name = self.estimated_name_scores.pop(-1)
 		print(selected_name)
-		if selected_name[1] > 0.1:
+		if selected_name[1] > 0.1 or self.recommendations_made == 0:
+			self.recommendations_made += 1
 			return selected_name[0]
 		return None
 
