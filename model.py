@@ -8,6 +8,7 @@ import random
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Masking, Dropout
 from keras.layers import LSTM, SimpleRNN
+from keras.layers import LSTM, SimpleRNN, GRU
 from keras.optimizers import RMSprop
 from keras.callbacks import EarlyStopping
 import numpy as np
@@ -247,16 +248,42 @@ class LstmModel(KerasSequentialModel):
 
 class SimpleRnnModel(KerasSequentialModel):
 	def build_model(self):
+		self.batch_size = 5
+
 		self.model = Sequential()
 		self.model.add(Masking(mask_value=0, input_shape=(self.maxlen, len(self.chars_map))))
-		self.model.add(SimpleRNN(64))
-		# self.model.add(Dropout(0.2))
+		self.model.add(SimpleRNN(64, return_sequences=True))
+		self.model.add(Dropout(0.4))
+		self.model.add(SimpleRNN(32, return_sequences=True))
+		self.model.add(SimpleRNN(10))
+		# self.model.add(Dropout(0.4))
 		self.model.add(Dense(1, activation='sigmoid'))
 
-		optimizer = RMSprop()
-		self.model.compile(loss='binary_crossentropy', optimizer=optimizer)
+		optimizer = RMSprop(lr=0.0001)
+		self.model.compile(loss='mean_squared_error', optimizer=optimizer)
 
 
 	def fit(self, x, y):
-		self.model.fit(x, y, batch_size=5, epochs=80, callbacks=[EarlyStopping(monitor='loss', min_delta=0.001, patience=20, verbose=1, mode='min')])
+		self.model.fit(x, y, batch_size=self.batch_size, epochs=120, shuffle=True, callbacks=[EarlyStopping(monitor='loss', min_delta=0.002, patience=5, verbose=1, mode='min')])
+
+
+
+class GRUModel(KerasSequentialModel):
+	def build_model(self):
+		self.batch_size = 5
+
+		self.model = Sequential()
+		self.model.add(Masking(mask_value=0, input_shape=(self.maxlen, len(self.chars_map))))
+		self.model.add(GRU(32))
+		# self.model.add(GRU(32, dropout=0.2, return_sequences=True))
+		# self.model.add(GRU(10))
+		# self.model.add(Dropout(0.4))
+		self.model.add(Dense(1, activation='sigmoid'))
+
+		optimizer = RMSprop(lr=0.0001)
+		self.model.compile(loss='mean_squared_error', optimizer=optimizer)
+
+
+	def fit(self, x, y):
+		self.model.fit(x, y, batch_size=self.batch_size, epochs=120, shuffle=True, callbacks=[EarlyStopping(monitor='loss', min_delta=0.002, patience=5, verbose=1, mode='min')])
 
