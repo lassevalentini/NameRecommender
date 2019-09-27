@@ -217,7 +217,6 @@ class KerasSequentialModel(NameRecommendModel):
 				self.estimated_name_scores = sorted(self.estimated_name_scores, key=lambda x: x[1])
 
 		selected_name = self.estimated_name_scores.pop(-1)
-		print(selected_name)
 		if selected_name[1] > 0.1 or self.recommendations_made == 0:
 			self.recommendations_made += 1
 			return selected_name[0]

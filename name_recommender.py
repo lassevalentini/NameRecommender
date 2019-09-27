@@ -1,5 +1,5 @@
 from argparse import ArgumentParser
-from model import Dec2VecModel, LstmModel, SimpleRnnModel
+from model import Dec2VecModel, LstmModel, SimpleRnnModel, AutoencoderModel
 import re
 
 def str2bool(v):
@@ -47,15 +47,15 @@ def read_name_file(name_file_name, name_scores):
 
 
 parser = ArgumentParser()
-parser.add_argument("-t", "--train", action="store_true", help="Train a new prod2vec model", default=False)
-parser.add_argument("-m", "--model-path", help="Path to the model pickle", default='model.pickle')
-parser.add_argument("-p", "--positive-names", help="", default='positive-names.txt')
-parser.add_argument("-n", "--negative-names", help="", default='negative-names.txt')
-parser.add_argument("-b", "--balance-classes", help="", default='upsample')
+parser.add_argument("-t", "--train", action="store_true", help="Train a new dov2vec model (only used by Dec2VecModel)", default=False)
+parser.add_argument("-m", "--model-path", help="Path to the model pickle (only used by Dec2VecModel)", default='model.pickle')
+parser.add_argument("-p", "--positive-names", help="File with positive ratings (score > 2)", default='positive-names.txt')
+parser.add_argument("-n", "--negative-names", help="File with positive ratings (score <= 2)", default='negative-names.txt')
+parser.add_argument("-b", "--balance-classes", help="Should positive and negative names be balanced for training (possible values: upsample, downsample, none)", default='upsample')
 parser.add_argument("-s", "--sample-factor", help="", type=int, default=10)
-parser.add_argument("--match-regex", help="", default='^[a-væøå]{3,10}$')
-parser.add_argument("--ignore-regex", help="", default='([wxyzq]|aa|ee|uu|ii|oo)')
-parser.add_argument("--ngrams", help="", default=2)
+parser.add_argument("--match-regex", help="Names must match regex to be considered", default='^[a-væøå]{3,10}$')
+parser.add_argument("--ignore-regex", help="Names must not match regex to be considered", default='([wxyzq]|aa|ee|uu|ii|oo)')
+parser.add_argument("--ngrams", help="Size of n-grams used for Dec2VecModel", default=2)
 parser.add_argument("names", help="Text file with all names, each name on a separate line")
 
 args = parser.parse_args()
@@ -79,7 +79,12 @@ name_scores = {}
 positive_names_file = read_name_file(args.positive_names, name_scores)
 negative_names_file = read_name_file(args.negative_names, name_scores)
 
+print('Using LstmModel - for other models see name_recommender.py')
 model = LstmModel(args, all_names, name_scores)
+### Alternative models ###
+# model = SimpleRnnModel(args, all_names, name_scores)
+# model = Dec2VecModel(args, all_names, name_scores)
+# model = AutoencoderModel(args, all_names, name_scores)
 model.train()
 
 try:
