@@ -12,6 +12,7 @@ from keras.optimizers import RMSprop
 from keras.callbacks import EarlyStopping
 import numpy as np
 from sklearn.metrics.pairwise import pairwise_distances
+from random import shuffle
 
 
 class NameRecommendModel:
@@ -102,7 +103,7 @@ class Dec2VecModel(NameRecommendModel):
 		if self.opts.train or not os.path.exists(self.opts.model_path):
 			# Train model
 			documents = [TaggedDocument(self.make_bigrams(list(name)), [i]) for i,name in enumerate(self.all_names_list)]
-			self.model = Doc2Vec(size=25, window=2, min_count=5, workers=4, iter=20)
+			self.model = Doc2Vec(size=5, window=6, min_count=2, workers=4, iter=10)
 			self.model.build_vocab(documents)
 			self.model.train(documents, total_examples=self.model.corpus_count, epochs=self.model.iter)
 			with open(self.opts.model_path, 'wb') as model_pickle:
@@ -241,7 +242,7 @@ class LstmModel(KerasSequentialModel):
 
 
 	def fit(self, x, y):
-		self.model.fit(x, y, batch_size=self.batch_size, epochs=120, callbacks=[EarlyStopping(monitor='loss', min_delta=0.001, patience=20, verbose=1, mode='min')])
+		self.model.fit(x, y, batch_size=self.batch_size, epochs=120, shuffle=True, callbacks=[EarlyStopping(monitor='loss', min_delta=0.001, patience=5, verbose=1, mode='min')])
 
 
 
@@ -289,8 +290,8 @@ class GRUModel(KerasSequentialModel):
 
 class AutoencoderModel(KerasSequentialModel):
 	def build_model(self):
-		self.batch_size = 10
-		self.encoding_dim = 10
+		self.batch_size = 50
+		self.encoding_dim = 20
 
 		# this is our input placeholder
 		input_layer = Input((self.maxlen * len(self.chars_map),))
@@ -312,17 +313,28 @@ class AutoencoderModel(KerasSequentialModel):
 		# create the decoder model
 		decoder = Model(encoded_input, decoder_layer(encoded_input))
 
+		# optimizer = SGD(lr=0.0001)
+		self.autoencoder.compile(optimizer='adadelta', loss='binary_crossentropy')
+		
+
+	def fit(self, x, y):
 		x = np.zeros((len(self.all_names), self.maxlen * len(self.chars_map)), dtype=np.uint8)
 
 		for i,name in enumerate(self.all_names):
 			x[i] = self.name_to_features(name).flatten()
 
-		self.autoencoder.compile(optimizer='adadelta', loss='binary_crossentropy')
-		self.autoencoder.fit(x, x, batch_size=self.batch_size, epochs=10, shuffle=True)#, callbacks=[EarlyStopping(monitor='loss', min_delta=0.002, patience=5, verbose=1, mode='min')])
+		self.autoencoder.fit(x, x, batch_size=self.batch_size, epochs=15, shuffle=True)#, callbacks=[EarlyStopping(monitor='loss', min_delta=0.002, patience=5, verbose=1, mode='min')])
+		
+		name_encodings = self.model.predict(x)
+		with open('name_encodings.csv', 'w', encoding="utf-8") as name_encodings_out_file:
+			for i,name in enumerate(self.all_names):
+				name_encodings_out_file.write(name)
+				name_encodings_out_file.write(',')
+				name_encodings_out_file.write(','.join([str(v) for v in name_encodings[i]]))
+				name_encodings_out_file.write('\n')
 
 
-	def fit(self, x, y):
-		pass
+
 
 	def make_recommendation(self):
 		if self.estimated_name_scores is None:
@@ -345,13 +357,14 @@ class AutoencoderModel(KerasSequentialModel):
 
 			for i in range(sim_matrix.shape[0]):
 				dists = [(j, sim_matrix[i,j]) for j in range(sim_matrix.shape[1])]
-				print(positive_names[i], [(self.name_distance_mapping[d[0]], d[1]) for d in sorted(dists, key=lambda x: x[1])[:5]])
+				print(positive_names[i], [(self.name_distance_mapping[d[0]], d[1]) for d in sorted(dists, key=lambda x: x[1])[:3]])
 				best = max(dists, key=lambda x: x[1])
 				# dists = sorted(dists, key=lambda x: x[1])[:5]
 				self.estimated_name_scores.append(best)
-			self.estimated_name_scores = sorted(self.estimated_name_scores, key=lambda x: x[1])
+			self.estimated_name_scores = shuffle(sorted(self.estimated_name_scores, key=lambda x: x[1]))
 
 		if len(self.estimated_name_scores) > 0:
+			selection = self.estimated_name_scores.pop()
 			name = self.name_distance_mapping[selection[0]]
 			print(name, selection[1])
 			return name
