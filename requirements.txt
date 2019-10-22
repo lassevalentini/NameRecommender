@@ -1,6 +1,6 @@
 gensim==3.1.0
 Keras==2.1.2
-nltk==3.2.5
+nltk==3.4.5
 numpy==1.13.3
 tensorflow==1.4.0
 sklearn
