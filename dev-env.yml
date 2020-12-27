@@ -1,12 +1,22 @@
 name: name_recommender
 channels:
   - conda-forge
+  - pytorch
 dependencies:
   - python=3.6.2
+  - pytorch
   - pip
   - pip:
     - azureml-defaults
+    - azureml-sdk
+    - black
+    - flake8
+    - flake8-bugbear
+    - mypy
     - gensim
     - tensorflow-gpu==2.0.0
     - keras<=2.3.1
     - scikit-learn
+    - nltk
+    - parsel
+    - requests
