@@ -9,9 +9,12 @@ dependencies:
   - pip:
     - azureml-defaults
     - azureml-sdk
+    - azureml-mlflow
+    - mlflow
     - black
     - flake8
     - flake8-bugbear
+    - jupyter
     - mypy
     - gensim
     - tensorflow-gpu==2.0.0
