@@ -78,7 +78,7 @@ if args.datalake_name not in ws.datastores:
     print(f"Creating datastore {args.datalake_name}")
     adlsgen2_datastore = Datastore.register_azure_data_lake_gen2(
         workspace=ws,
-        datastore_name="datalake",
+        datastore_name=args.datalake_name,
         account_name=args.datalake_name,
         subscription_id=ws.subscription_id,
         resource_group=args.datalake_rg_name,
