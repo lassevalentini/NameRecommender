@@ -1,7 +1,7 @@
 import mlflow
 import mlflow.azureml
 from types import SimpleNamespace
-from azureml.core import Run, Dataset
+from azureml.core import Run
 from argparse import ArgumentParser
 from name_recommender.datasets import allowed_names, name_sentiments
 from name_recommender.model import (
@@ -10,6 +10,8 @@ from name_recommender.model import (
     SimpleRnnModel,
     AutoencoderModel,
 )
+import joblib
+import os
 
 # parser = ArgumentParser()
 # parser.add_argument("--allowed-names", type=str)
@@ -31,4 +33,15 @@ with mlflow.start_run():
         SimpleNamespace(**{"balance_classes": "no"}), allowed_names, name_sentiments
     )
     model.train()
-    print(model.make_recommendation())
+    os.makedirs("outputs", exist_ok=True)
+    model_path = "outputs/name_lstm.pkl"
+    joblib.dump(value=model, filename=model_path)
+    run.upload_file(name=model_path, path_or_stream=model_path)
+
+    # Register the model
+    run.register_model(
+        model_path=model_path,
+        model_name="name_lstm",
+    )
+
+    run.complete()
