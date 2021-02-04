@@ -22,12 +22,15 @@ amlcomputes = {
         "min_nodes": 0,
         "max_nodes": 10,
         "idle_seconds_before_scaledown": 1200,
+        # "vm_priority": "lowpriority",
+        "identity_type": "SystemAssigned ",
     },
     "gpu-cluster": {
         "vm_size": "STANDARD_NC6",
         "min_nodes": 0,
         "max_nodes": 4,
         "idle_seconds_before_scaledown": 1200,
+        "identity_type": "SystemAssigned ",
     },
 }
 
