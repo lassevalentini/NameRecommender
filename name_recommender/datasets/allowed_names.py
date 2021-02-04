@@ -1,7 +1,7 @@
 from azureml.core import Workspace, Datastore, Dataset
 
 _dataset_name = "allowed_names"
-_datastore_name = "datalake"
+_datastore_name = "lvjdatalake"
 
 
 def get_dataset(ws: Workspace) -> Dataset:
