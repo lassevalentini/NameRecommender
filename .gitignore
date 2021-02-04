@@ -106,3 +106,5 @@ like-names.txt
 
 negative-names.txt
 positive-names.txt
+/mlruns/
+/.vscode/
