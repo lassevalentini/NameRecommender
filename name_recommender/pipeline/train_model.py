@@ -19,12 +19,13 @@ from name_recommender.model import (
 with mlflow.start_run():
     run = Run.get_context()
     ws = run.experiment.workspace
-    allowed_names_ds = allowed_names.get_dataset()
-    name_sentiments_ds = name_sentiments.get_dataset()
+    allowed_names_ds = allowed_names.get_dataset(ws)
+    name_sentiments_ds = name_sentiments.get_dataset(ws)
 
-    allowed_names = allowed_names_ds.to_pandas_dataframe()
+    allowed_names_df = allowed_names_ds.to_pandas_dataframe()
     name_sentiments = name_sentiments_ds.to_pandas_dataframe()
 
+    allowed_names = [n.lower() for n in allowed_names_df.iloc[:, 0].tolist()]
     name_sentiments = name_sentiments.set_index("name")["score"]
     model = LstmModel(
         SimpleNamespace(**{"balance_classes": "no"}), allowed_names, name_sentiments
