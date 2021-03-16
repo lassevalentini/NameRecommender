@@ -1,10 +1,13 @@
 name: name_recommender
 channels:
   - conda-forge
+  - huggingface
   - pytorch
 dependencies:
   - python=3.6.2
   - pytorch
+  - transformers
+  - datasets
   - pip
   - pip:
     - azureml-defaults

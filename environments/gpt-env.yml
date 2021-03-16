@@ -1,0 +1,12 @@
+name: name_gpt
+channels:
+  - huggingface
+  - conda-forge
+dependencies:
+  - python=3.6.2
+  - transformers
+  - datasets
+  - pip
+  - pip:
+    - azureml-defaults
+    - azureml-sdk
