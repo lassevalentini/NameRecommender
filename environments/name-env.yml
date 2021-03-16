@@ -9,8 +9,6 @@ dependencies:
   - pip:
     - azureml-defaults
     - azureml-sdk
-    - azureml-mlflow
-    - mlflow
     - gensim
     - tensorflow-gpu==2.0.0
     - keras<=2.3.1
